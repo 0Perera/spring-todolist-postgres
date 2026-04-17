@@ -39,7 +39,14 @@ O projeto foi desenvolvido utilizando uma stack moderna e amplamente utilizada n
 
 A API possui uma documentação viva e interativa criada com o Swagger/OpenAPI. Através dela, você pode visualizar todos os endpoints disponíveis, seus respectivos schemas (DTOs) e até mesmo testar as requisições diretamente pelo navegador.
 
-Com a aplicação rodando localmente, acesse a interface visual através do link:
+⚠️ **Importante:** A documentação não está hospedada na nuvem. Para visualizá-la, você precisa primeiro **iniciar a aplicação localmente**. 
+
+**1.** Rode o projeto na sua máquina:
+```bash
+./mvnw spring-boot:run
+```
+
+**2.** Uma vez que o servidor inicie com sucesso, acesse a interface visual pelo seu navegador através do link:
 👉 **[http://localhost:8080/swagger-ui/index.html](http://localhost:8080/swagger-ui/index.html)**
 
 **Dica de Uso:** 
