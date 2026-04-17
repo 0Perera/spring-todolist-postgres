@@ -31,6 +31,20 @@ O projeto foi desenvolvido utilizando uma stack moderna e amplamente utilizada n
 - **Redução de Boilerplate:** Lombok
 - **Validação:** Jakarta Validation
 - **Testes:** JUnit 5, Mockito e Spring MockMvc
+- **Documentação:** Springdoc OpenAPI 3 (Swagger UI)
+
+---
+
+## 📖 Documentação da API (Swagger)
+
+A API possui uma documentação viva e interativa criada com o Swagger/OpenAPI. Através dela, você pode visualizar todos os endpoints disponíveis, seus respectivos schemas (DTOs) e até mesmo testar as requisições diretamente pelo navegador.
+
+Com a aplicação rodando localmente, acesse a interface visual através do link:
+👉 **[http://localhost:8080/swagger-ui/index.html](http://localhost:8080/swagger-ui/index.html)**
+
+**Dica de Uso:** 
+- Cadastre um usuário pela aba de testes no Swagger ou via Postman.
+- Clique no botão **Authorize** (no topo do Swagger UI) e insira as credenciais do usuário cadastrado na opção `basicAuth` para liberar e testar todas as rotas protegidas.
 
 ---
 
@@ -96,7 +110,6 @@ Os testes automatizados cobrem desde a persistência até as requisições da ca
 
 ## 💡 Próximos Passos (Roadmap)
 Como todo projeto de estudo, sempre há espaço para evoluir. Algumas das melhorias planejadas:
-- Inclusão do Swagger/OpenAPI 3.0 para documentação viva.
 - Implementação de JWT (JSON Web Tokens) em vez de Basic Auth/Session.
 - Dockerização da API e do banco de dados (Criação de `docker-compose.yml`).
 

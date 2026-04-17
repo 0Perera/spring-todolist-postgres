@@ -132,14 +132,13 @@ class TaskServiceTest {
     @Test
     @DisplayName("Deve encontrar uma tarefa por título com sucesso")
     void findByTitleCase1(){
-        TaskRequest createdRequest = createDefaultRequest();
         Task createdTask = createDefaultEntity();
         TaskResponse expectedResponse = createDefaultResponse();
 
         when(taskRepository.findByTitleAndCreatedBy(eq(DEFAULT_TITLE), any(User.class))).thenReturn(Optional.of(createdTask));
         when(taskMapper.toResponse(createdTask)).thenReturn(expectedResponse);
 
-        TaskResponse result = taskService.findByTitle(createdRequest);
+        TaskResponse result = taskService.findByTitle(DEFAULT_TITLE);
 
         assertEquals(expectedResponse, result);
         verify(taskRepository, times(1)).findByTitleAndCreatedBy(eq(DEFAULT_TITLE), any(User.class));
@@ -149,10 +148,9 @@ class TaskServiceTest {
     @Test
     @DisplayName("Deve lançar NotFoundException quando não encontrar tarefa por título")
     void findByTitleCase2(){
-        TaskRequest createdRequest = createDefaultRequest();
         when(taskRepository.findByTitleAndCreatedBy(eq(DEFAULT_TITLE), any(User.class))).thenReturn(Optional.empty());
 
-        assertThrows(NotFoundException.class, () -> taskService.findByTitle(createdRequest));
+        assertThrows(NotFoundException.class, () -> taskService.findByTitle(DEFAULT_TITLE));
         verify(taskRepository, times(1)).findByTitleAndCreatedBy(eq(DEFAULT_TITLE), any(User.class));
     }
 

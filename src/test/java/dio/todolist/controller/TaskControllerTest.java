@@ -90,10 +90,9 @@ class TaskControllerTest {
     @Test
     @DisplayName("Deve retornar 200 OK ao buscar por título existente")
     void findByTitleCase1() throws Exception {
-        TaskRequest createdRequest = createDefaultRequest();
         TaskResponse expectedResponse = createDefaultResponse();
 
-        when(taskService.findByTitle(createdRequest)).thenReturn(expectedResponse);
+        when(taskService.findByTitle(DEFAULT_TITLE)).thenReturn(expectedResponse);
 
         mockMvc.perform(MockMvcRequestBuilders.get("/task/findByTitle")
                     .param("title", DEFAULT_TITLE)
@@ -107,8 +106,7 @@ class TaskControllerTest {
     @Test
     @DisplayName("Deve retornar 404 Not Found ao buscar por título inexistente")
     void findByTitleCase2() throws Exception {
-        TaskRequest createdRequest = createDefaultRequest();
-        when(taskService.findByTitle(createdRequest)).thenThrow(new NotFoundException("Tarefa não encontrada"));
+        when(taskService.findByTitle(DEFAULT_TITLE)).thenThrow(new NotFoundException("Tarefa não encontrada"));
 
         mockMvc.perform(MockMvcRequestBuilders.get("/task/findByTitle")
                     .param("title", DEFAULT_TITLE)

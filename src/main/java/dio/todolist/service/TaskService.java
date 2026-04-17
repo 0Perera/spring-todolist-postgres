@@ -52,9 +52,9 @@ public class TaskService {
         return taskMapper.toResponse(response);
     }
 
-    public TaskResponse findByTitle(TaskRequest taskRequest) {
+    public TaskResponse findByTitle(String title) {
         User user = authUser();
-        Task task = taskRepository.findByTitleAndCreatedBy(taskRequest.title(), user)
+        Task task = taskRepository.findByTitleAndCreatedBy(title, user)
                 .orElseThrow(() -> new NotFoundException("Tarefa não encontrada"));
 
         return taskMapper.toResponse(task);
