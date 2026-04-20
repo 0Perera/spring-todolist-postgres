@@ -32,9 +32,13 @@ class UserDetailsServiceImplTest {
     UserDetailsServiceImpl userDetailsService;
 
     private User createDefaultUser() {
+        return createUserWith(DEFAULT_USER_EMAIL, DEFAULT_USER_PASSWORD);
+    }
+
+    private User createUserWith(String email, String password) {
         User user = new User();
-        user.setEmail(DEFAULT_USER_EMAIL);
-        user.setPassword(DEFAULT_USER_PASSWORD);
+        user.setEmail(email);
+        user.setPassword(password);
         user.setName(DEFAULT_USER_NAME);
         return user;
     }
@@ -105,13 +109,11 @@ class UserDetailsServiceImplTest {
     @Test
     @DisplayName("Deve carregar múltiplos usuários diferentes com sucesso")
     void loadUserByUsernameCase5() {
+        String user2Email = "outro@dev.com";
+        String user2Password = "$2a$10$outrasenha";
 
         User createdUser1 = createDefaultUser();
-        User createdUser2 = new User();
-        String user2Email = "outro@dev.com";
-        createdUser2.setEmail(user2Email);
-        String user2Password = "$2a$10$outrasenha";
-        createdUser2.setPassword(user2Password);
+        User createdUser2 = createUserWith(user2Email, user2Password);
 
         when(userRepository.findByEmail(DEFAULT_USER_EMAIL)).thenReturn(Optional.of(createdUser1));
         when(userRepository.findByEmail(user2Email)).thenReturn(Optional.of(createdUser2));

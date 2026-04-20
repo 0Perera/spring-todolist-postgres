@@ -42,14 +42,14 @@ class AuthControllerTest {
     @MockitoBean
     private AuthenticationManager authenticationManager;
 
-    private LoginRequest loginRequest(){
+    private LoginRequest createDefaultLoginRequest() {
         return new LoginRequest(DEFAULT_USERNAME, DEFAULT_PASSWORD);
     }
 
     @Test
     @DisplayName("Deve retornar 200 OK ao realizar login com credenciais válidas")
     void loginCase1() throws Exception {
-        LoginRequest createdRequest = loginRequest();
+        LoginRequest createdRequest = createDefaultLoginRequest();
         String loginJson = objectMapper.writeValueAsString(createdRequest);
 
         Authentication auth = new UsernamePasswordAuthenticationToken(createdRequest.email(), createdRequest.password());

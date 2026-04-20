@@ -24,7 +24,7 @@ O principal objetivo desta aplicação não é apenas ser mais um gerenciador de
 O projeto foi desenvolvido utilizando uma stack moderna e amplamente utilizada no mercado:
 
 - **Linguagem:** Java 21
-- **Framework Principal:** Spring Boot 3.x
+- **Framework Principal:** Spring Boot 4.x
 - **Persistência de Dados:** Spring Data JPA, Hibernate, PostgreSQL (Produção) e H2 Database (Testes)
 - **Segurança:** Spring Security (Criptografia com BCrypt)
 - **Mapeamento de Objetos:** MapStruct (Entity ↔ DTO)
@@ -62,7 +62,7 @@ Para garantir um código limpo e de fácil manutenção, o projeto segue os segu
 - **Arquitetura em Camadas (Layered Architecture):** Divisão clara de responsabilidades entre `Controller` (camada web), `Service` (regras de negócio) e `Repository` (acesso a dados).
 - **Padrão DTO (Data Transfer Object):** Implementado utilizando os `Records` do Java para garantir imutabilidade e tráfego seguro de informações, sem expor entidades do banco de dados na web.
 - **Multitenancy Lógico / Ownership:** A camada de serviço garante via `SecurityContextHolder` que um usuário só pode visualizar, editar e deletar as **suas próprias tarefas**. O isolamento de dados é reforçado por métodos como `validateOwnership()`.
-- **Tratamento de Exceções Global:** Implementado um `@RestControllerAdvice` (`GlobalExceptionHandler`) para capturar exceções da aplicação (como `NotFoundException` ou `AccessDeniedException`) e transformá-las em respostas HTTP modeladas corretamente (ex: 404 Not Found, 403 Forbidden).
+- **Tratamento de Exceções Global:** Implementado um `@RestControllerAdvice` (`GlobalExceptionHandler`) para capturar exceções da aplicação (como `NotFoundException`, `AccessDeniedException` ou `DuplicateEmailException`) e transformá-las em respostas HTTP modeladas corretamente (ex: 404 Not Found, 403 Forbidden, 409 Conflict).
 - **Conformidade REST:** Uso adequado dos verbos HTTP, envio correto de dados via *Query Parameters* em requisições `GET` (como filtros de busca), e retorno assertivo de Status Codes (ex: `204 No Content` para sucesso em deleções e `201 Created` para criações).
 - **Cobertura de Testes Automatizados:** Testes integrados utilizando `@SpringBootTest` e `@MockitoBean` nas camadas de `Service` (testando as regras de negócio com o contexto da aplicação), testes de persistência isolada na camada `Repository` com `@DataJpaTest`, e testes de integração da API na camada `Controller` validando o comportamento de ponta-a-ponta utilizando `@WebMvcTest` e MockMvc.
 
@@ -71,7 +71,7 @@ Para garantir um código limpo e de fácil manutenção, o projeto segue os segu
 ## 📋 Funcionalidades da API
 
 A API permite:
-1. **Autenticação:** Login de usuário e proteção de rotas.
+1. **Autenticação e Cadastro:** Registro de usuário com **e-mail único** (duplicata retorna 409 Conflict), login e proteção de rotas.
 2. **Gerenciamento de Tarefas:** Adicionar novas tarefas passando Nome e Descrição.
 3. **Controle de Status:** Atualizar parcialmente uma tarefa utilizando status de andamento (ex: `PENDENTE`, `CONCLUIDA`).
 4. **Filtros e Consultas:** Buscar todas as tarefas do usuário autenticado, pesquisar por título ou listar tarefas passando um status específico.

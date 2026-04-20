@@ -158,21 +158,18 @@ class TaskServiceTest {
     @DisplayName("Deve listar todas as tarefas do usuário autenticado")
     void listAllCase1(){
         Task createdTask = createDefaultEntity();
-        TaskResponse expectedResponse1 = createDefaultResponse();
-        TaskResponse expectedResponse2 = new TaskResponse(2L,
-                "Outra Tarefa",
-                "Descrição de outra tarefa",
-                LocalDateTime.now(),
-                TaskStatus.PENDENTE);
-        List<TaskResponse> expectedResponseList = List.of(expectedResponse1, expectedResponse2);
+        TaskResponse expectedResponse = createDefaultResponse();
+        List<Task> taskList = List.of(createdTask);
+        List<TaskResponse> expectedResponseList = List.of(expectedResponse);
 
-        when(taskRepository.findByCreatedBy(any(User.class))).thenReturn(List.of(createdTask));
-        when(taskMapper.toResponseList(List.of(createdTask))).thenReturn(expectedResponseList);
+        when(taskRepository.findByCreatedBy(any(User.class))).thenReturn(taskList);
+        when(taskMapper.toResponseList(taskList)).thenReturn(expectedResponseList);
 
         List<TaskResponse> result = taskService.listAll();
 
         assertEquals(expectedResponseList, result);
         verify(taskRepository, times(1)).findByCreatedBy(any(User.class));
+        verify(taskMapper, times(1)).toResponseList(taskList);
     }
 
     @Test

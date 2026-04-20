@@ -25,6 +25,11 @@ public class GlobalExceptionHandler {
         return ResponseEntity.status(404).body(e.getMessage());
     }
 
+    @ExceptionHandler(DuplicateEmailException.class)
+    public ResponseEntity<String> handleDuplicateEmailException(DuplicateEmailException e) {
+        return ResponseEntity.status(HttpStatus.CONFLICT).body(e.getMessage());
+    }
+
     @ExceptionHandler(BadCredentialsException.class)
     public ResponseEntity<String> handleBadCredentialsException(BadCredentialsException e) {
         return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Email ou Senha invalidos");

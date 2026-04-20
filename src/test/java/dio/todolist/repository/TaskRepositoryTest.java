@@ -50,9 +50,22 @@ class TaskRepositoryTest {
         return user;
     }
 
-    private Task createTask(TaskRequest taskRequest){
+    private Task createTask(TaskRequest taskRequest) {
+        return createTaskForUser(taskRequest, defaultUser);
+    }
+
+    private Task createTaskForUser(TaskRequest taskRequest, User user) {
+        Task task = new Task(taskRequest);
+        task.setCreatedBy(user);
+        this.entityManager.persist(task);
+        this.entityManager.flush();
+        return task;
+    }
+
+    private Task createTaskWithStatus(TaskRequest taskRequest, TaskStatus status) {
         Task task = new Task(taskRequest);
         task.setCreatedBy(defaultUser);
+        task.setStatus(status);
         this.entityManager.persist(task);
         this.entityManager.flush();
         return task;
@@ -189,50 +202,40 @@ class TaskRepositoryTest {
     @DisplayName("Deve retornar apenas tarefas do usuário especificado")
     void findByCreatedByCase3() {
         Task taskUser1 = createTask(createDefaultRequest());
-        
+
         User otherUser = createUser("Outro Usuário", "outro@email.com", "senha456");
-        
-        Task taskUser2 = createTask(new TaskRequest("Tarefa do outro usuário", "Descrição"));
-        taskUser2.setCreatedBy(otherUser);
-        this.entityManager.persist(taskUser2);
-        this.entityManager.flush();
+        createTaskForUser(new TaskRequest("Tarefa do outro usuário", "Descrição"), otherUser);
 
         List<Task> result = taskRepository.findByCreatedBy(defaultUser);
 
         assertEquals(1, result.size(), "Deveria retornar apenas 1 tarefa do usuário");
-        assertEquals(taskUser1.getTitle(), result.get(0).getTitle());
+        assertEquals(taskUser1.getTitle(), result.getFirst().getTitle());
     }
 
     @Test
     @DisplayName("Deve retornar tarefas pendentes de um usuário com sucesso")
     void findByCreatedByAndStatusCase1() {
         Task taskPending = createTask(createDefaultRequest());
-        Task taskCompleted = createTask(new TaskRequest("Tarefa Concluída", "Descrição"));
-        taskCompleted.setStatus(TaskStatus.CONCLUIDA);
-        this.entityManager.persist(taskCompleted);
-        this.entityManager.flush();
+        createTaskWithStatus(new TaskRequest("Tarefa Concluída", "Descrição"), TaskStatus.CONCLUIDA);
 
         List<Task> result = taskRepository.findByCreatedByAndStatus(defaultUser, TaskStatus.PENDENTE);
 
         assertEquals(1, result.size(), "Deveria retornar apenas tarefas pendentes");
-        assertEquals(taskPending.getTitle(), result.get(0).getTitle());
-        assertEquals(TaskStatus.PENDENTE, result.get(0).getStatus());
+        assertEquals(taskPending.getTitle(), result.getFirst().getTitle());
+        assertEquals(TaskStatus.PENDENTE, result.getFirst().getStatus());
     }
 
     @Test
     @DisplayName("Deve retornar tarefas concluídas de um usuário com sucesso")
     void findByCreatedByAndStatusCase2() {
-        this.createTask(createDefaultRequest());
-        Task taskCompleted = this.createTask(new TaskRequest("Tarefa Concluída", "Descrição"));
-        taskCompleted.setStatus(TaskStatus.CONCLUIDA);
-        this.entityManager.persist(taskCompleted);
-        this.entityManager.flush();
+        createTask(createDefaultRequest());
+        Task taskCompleted = createTaskWithStatus(new TaskRequest("Tarefa Concluída", "Descrição"), TaskStatus.CONCLUIDA);
 
         List<Task> result = taskRepository.findByCreatedByAndStatus(defaultUser, TaskStatus.CONCLUIDA);
 
         assertEquals(1, result.size(), "Deveria retornar apenas tarefas concluídas");
-        assertEquals(taskCompleted.getTitle(), result.get(0).getTitle());
-        assertEquals(TaskStatus.CONCLUIDA, result.get(0).getStatus());
+        assertEquals(taskCompleted.getTitle(), result.getFirst().getTitle());
+        assertEquals(TaskStatus.CONCLUIDA, result.getFirst().getStatus());
     }
 
     @Test

@@ -3,6 +3,7 @@ package dio.todolist.service;
 import dio.todolist.dto.UserRequest;
 import dio.todolist.dto.UserResponse;
 import dio.todolist.dto.UserUpdate;
+import dio.todolist.handler.DuplicateEmailException;
 import dio.todolist.handler.NotFoundException;
 import dio.todolist.mapper.UserMapper;
 import dio.todolist.repository.UserRepository;
@@ -22,6 +23,9 @@ public class UserService {
     }
 
     public UserResponse create(UserRequest userRequest) {
+        if (userRepository.findByEmail(userRequest.email()).isPresent()) {
+            throw new DuplicateEmailException("Email já está em uso");
+        }
         var entity = userMapper.toEntity(userRequest);
         entity.setPassword(passwordEncoderService.encode(entity.getPassword()));
         var response = userRepository.save(entity);
@@ -38,7 +42,12 @@ public class UserService {
         return userRepository.findById(id)
                 .map(existing -> {
                     userUpdate.name().ifPresent(existing::setName);
-                    userUpdate.email().ifPresent(existing::setEmail);
+                    userUpdate.email().ifPresent(newEmail -> {
+                        userRepository.findByEmail(newEmail)
+                                .filter(u -> !u.getId().equals(id))
+                                .ifPresent(u -> { throw new DuplicateEmailException("Email já está em uso"); });
+                        existing.setEmail(newEmail);
+                    });
                     userUpdate.password().ifPresent(password ->
                             existing.setPassword(passwordEncoderService.encode(password))
                     );

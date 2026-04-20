@@ -4,6 +4,7 @@ import dio.todolist.domain.User;
 import dio.todolist.dto.UserRequest;
 import dio.todolist.dto.UserResponse;
 import dio.todolist.dto.UserUpdate;
+import dio.todolist.handler.DuplicateEmailException;
 import dio.todolist.handler.NotFoundException;
 import dio.todolist.mapper.UserMapper;
 import dio.todolist.repository.UserRepository;
@@ -71,6 +72,7 @@ class UserServiceTest {
         User createdUser = createDefaultEntity();
         UserResponse expectedResponse = createDefaultResponse();
 
+        when(userRepository.findByEmail(DEFAULT_USER_EMAIL)).thenReturn(Optional.empty());
         when(userMapper.toEntity(createdRequest)).thenReturn(createdUser);
         when(passwordEncoderService.encode(DEFAULT_USER_PASSWORD)).thenReturn(ENCODED_PASSWORD);
         when(userRepository.save(any(User.class))).thenReturn(createdUser);
@@ -79,10 +81,24 @@ class UserServiceTest {
         UserResponse result = userService.create(createdRequest);
 
         assertEquals(expectedResponse, result);
+        verify(userRepository, times(1)).findByEmail(DEFAULT_USER_EMAIL);
         verify(userMapper, times(1)).toEntity(createdRequest);
         verify(passwordEncoderService, times(1)).encode(DEFAULT_USER_PASSWORD);
         verify(userRepository, times(1)).save(any(User.class));
         verify(userMapper, times(1)).toResponse(createdUser);
+    }
+
+    @Test
+    @DisplayName("Deve lançar DuplicateEmailException ao criar usuário com email já cadastrado")
+    void createCase2() {
+        UserRequest createdRequest = createDefaultRequest();
+        User existingUser = createDefaultEntity();
+
+        when(userRepository.findByEmail(DEFAULT_USER_EMAIL)).thenReturn(Optional.of(existingUser));
+
+        assertThrows(DuplicateEmailException.class, () -> userService.create(createdRequest));
+        verify(userRepository, times(1)).findByEmail(DEFAULT_USER_EMAIL);
+        verify(userRepository, never()).save(any(User.class));
     }
 
     @Test
@@ -116,8 +132,10 @@ class UserServiceTest {
         User createdUser = createDefaultEntity();
         UserResponse expectedResponse = createDefaultResponse();
         UserUpdate updateRequest = createDefaultUpdate();
+        String newEmail = "feeps@dev.com";
 
         when(userRepository.findById(DEFAULT_USER_ID)).thenReturn(Optional.of(createdUser));
+        when(userRepository.findByEmail(newEmail)).thenReturn(Optional.empty());
         when(passwordEncoderService.encode("novasenha123")).thenReturn("$2a$10$novasenhaencodada");
         when(userRepository.save(any(User.class))).thenReturn(createdUser);
         when(userMapper.toResponse(createdUser)).thenReturn(expectedResponse);
@@ -126,6 +144,7 @@ class UserServiceTest {
 
         assertEquals(expectedResponse, result);
         verify(userRepository, times(1)).findById(DEFAULT_USER_ID);
+        verify(userRepository, times(1)).findByEmail(newEmail);
         verify(passwordEncoderService, times(1)).encode("novasenha123");
         verify(userRepository, times(1)).save(createdUser);
         verify(userMapper, times(1)).toResponse(createdUser);
@@ -167,6 +186,24 @@ class UserServiceTest {
 
         assertThrows(NotFoundException.class, () -> userService.update(NOT_FOUND_ID, updateRequest));
         verify(userRepository, times(1)).findById(NOT_FOUND_ID);
+        verify(userRepository, never()).save(any(User.class));
+    }
+
+    @Test
+    @DisplayName("Deve lançar DuplicateEmailException ao atualizar para email já usado por outro usuário")
+    void updateCase4() {
+        String conflictingEmail = "feeps@dev.com";
+        UserUpdate updateRequest = createDefaultUpdate();
+        User currentUser = createDefaultEntity();
+        User otherUser = new User();
+        otherUser.setId(2L);
+        otherUser.setEmail(conflictingEmail);
+
+        when(userRepository.findById(DEFAULT_USER_ID)).thenReturn(Optional.of(currentUser));
+        when(userRepository.findByEmail(conflictingEmail)).thenReturn(Optional.of(otherUser));
+
+        assertThrows(DuplicateEmailException.class, () -> userService.update(DEFAULT_USER_ID, updateRequest));
+        verify(userRepository, times(1)).findByEmail(conflictingEmail);
         verify(userRepository, never()).save(any(User.class));
     }
 

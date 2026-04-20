@@ -1,15 +1,15 @@
 package dio.todolist.repository;
 
 import dio.todolist.domain.User;
-import dio.todolist.dto.TaskRequest;
 import dio.todolist.dto.UserRequest;
 import jakarta.persistence.EntityManager;
-import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.data.jpa.test.autoconfigure.DataJpaTest;
 import org.springframework.test.context.ActiveProfiles;
+
+import org.springframework.dao.DataIntegrityViolationException;
 
 import java.util.Optional;
 
@@ -58,8 +58,20 @@ class UserRepositoryTest {
     }
 
     @Test
-    @DisplayName("Deve salvar um usuário e atualizar dados")
+    @DisplayName("Deve lançar exceção ao salvar dois usuários com o mesmo email")
     void saveCase2() {
+        createUser(createDefaultRequest());
+
+        User duplicate = new User(createDefaultRequest());
+
+        assertThrows(DataIntegrityViolationException.class, () -> {
+            userRepository.saveAndFlush(duplicate);
+        });
+    }
+
+    @Test
+    @DisplayName("Deve salvar um usuário e atualizar dados")
+    void saveCase3() {
         User createdUser = createUser(createDefaultRequest());
         
         createdUser.setName("Maria");
