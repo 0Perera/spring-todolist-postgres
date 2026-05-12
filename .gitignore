@@ -41,6 +41,9 @@ logs/
 Thumbs.db
 desktop.ini
 
+### Claude ###
+CLAUDE.md
+
 ### Env ###
 .env
 .env.*

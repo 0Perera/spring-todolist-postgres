@@ -1,11 +1,13 @@
 package dio.todolist.controller;
 
+import dio.todolist.domain.User;
 import dio.todolist.dto.UserRequest;
 import dio.todolist.dto.UserResponse;
 import dio.todolist.dto.UserUpdate;
 import dio.todolist.service.UserService;
 import jakarta.validation.Valid;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
 import io.swagger.v3.oas.annotations.Operation;
@@ -23,6 +25,7 @@ public class UserController {
     private final UserService userService;
 
     public UserController(UserService userService) {this.userService = userService;}
+
 
     @Operation(summary = "Criar Usuário", description = "Cadastra um novo usuário no sistema.\n" +
             "Este é o primeiro passo recomendado para utilizar a API, pois as rotas de tarefas exigem autenticação baseada nos dados cadastrados aqui.")
@@ -47,8 +50,8 @@ public class UserController {
             @ApiResponse(responseCode = "404", description = "Usuário não encontrado")
     })
     @GetMapping("/{id}")
-    public ResponseEntity<UserResponse> findById(@PathVariable Long id) {
-        var response = userService.findById(id);
+    public ResponseEntity<UserResponse> findById(@PathVariable Long id, @AuthenticationPrincipal User authUser) {
+        var response = userService.findById(id, authUser);
         return ResponseEntity.ok(response);
     }
 
@@ -60,8 +63,8 @@ public class UserController {
             @ApiResponse(responseCode = "404", description = "Usuário não encontrado")
     })
     @PutMapping("/{id}")
-    public ResponseEntity<UserResponse> update(@PathVariable Long id, @RequestBody @Valid UserUpdate userUpdate) {
-        var response = userService.update(id, userUpdate);
+    public ResponseEntity<UserResponse> update(@PathVariable Long id, @RequestBody @Valid UserUpdate userUpdate, @AuthenticationPrincipal User authUser) {
+        var response = userService.update(id, userUpdate, authUser);
         return ResponseEntity.ok(response);
     }
 
@@ -71,8 +74,8 @@ public class UserController {
             @ApiResponse(responseCode = "404", description = "Usuário não encontrado")
     })
     @DeleteMapping("/{id}")
-    public ResponseEntity<Void> delete(@PathVariable Long id) {
-        userService.delete(id);
+    public ResponseEntity<Void> delete(@PathVariable Long id, @AuthenticationPrincipal User authUser) {
+        userService.delete(id, authUser);
         return ResponseEntity.noContent().build();
     }
 }

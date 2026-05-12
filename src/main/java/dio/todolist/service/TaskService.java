@@ -10,9 +10,6 @@ import dio.todolist.dto.TaskResponse;
 import dio.todolist.dto.TaskUpdate;
 import dio.todolist.mapper.TaskMapper;
 import dio.todolist.repository.TaskRepository;
-import dio.todolist.repository.UserRepository;
-import org.springframework.security.core.Authentication;
-import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
@@ -20,23 +17,14 @@ import java.util.List;
 @Service
 public class TaskService {
 
+    private static final String NOT_FOUND_MESSAGE = "Tarefa não encontrada";
+
     private final TaskRepository taskRepository;
     private final TaskMapper taskMapper;
-    private final UserRepository userRepository;
 
-    public TaskService(TaskRepository taskRepository, TaskMapper taskMapper, UserRepository userRepository) {
+    public TaskService(TaskRepository taskRepository, TaskMapper taskMapper) {
         this.taskRepository = taskRepository;
         this.taskMapper = taskMapper;
-        this.userRepository = userRepository;
-    }
-
-    private User authUser() {
-        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-        assert authentication != null;
-        String email = authentication.getName();
-
-        return userRepository.findByEmail(email)
-                .orElseThrow(() -> new NotFoundException("Usuario não encontrada: " + email));
     }
 
     private void validateOwnership(Task task, User user) {
@@ -45,32 +33,30 @@ public class TaskService {
         }
     }
 
-    public TaskResponse create(TaskRequest taskRequest) {
+    public TaskResponse create(TaskRequest taskRequest, User authUser) {
         var entity = taskMapper.toEntity(taskRequest);
-        entity.setCreatedBy(authUser());
+        entity.setCreatedBy(authUser);
         var response = taskRepository.save(entity);
         return taskMapper.toResponse(response);
     }
 
-    public TaskResponse findByTitle(String title) {
-        User user = authUser();
-        Task task = taskRepository.findByTitleAndCreatedBy(title, user)
-                .orElseThrow(() -> new NotFoundException("Tarefa não encontrada"));
+    public TaskResponse findByTitle(String title, User authUser) {
+        Task task = taskRepository.findByTitleAndCreatedBy(title, authUser)
+                .orElseThrow(() -> new NotFoundException(NOT_FOUND_MESSAGE));
 
         return taskMapper.toResponse(task);
     }
 
-    public List<TaskResponse> listAll() {
-        var response = taskRepository.findByCreatedBy(authUser());
+    public List<TaskResponse> listAll(User authUser) {
+        var response = taskRepository.findByCreatedBy(authUser);
         return taskMapper.toResponseList(response);
     }
 
-    public TaskResponse update(Long id, TaskUpdate taskUpdate) {
-        User user = authUser();
+    public TaskResponse update(Long id, TaskUpdate taskUpdate, User authUser) {
         Task task = taskRepository.findById(id)
-                .orElseThrow(() -> new NotFoundException("Tarefa não encontrada"));
+                .orElseThrow(() -> new NotFoundException(NOT_FOUND_MESSAGE));
 
-        validateOwnership(task, user);
+        validateOwnership(task, authUser);
 
         taskUpdate.title().ifPresent(task::setTitle);
         taskUpdate.description().ifPresent(task::setDescription);
@@ -80,17 +66,16 @@ public class TaskService {
         return taskMapper.toResponse(updated);
     }
 
-    public List<TaskResponse> listByStatus(TaskStatus status) {
-        var response = taskRepository.findByCreatedByAndStatus(authUser(), status);
+    public List<TaskResponse> listByStatus(TaskStatus status, User authUser) {
+        var response = taskRepository.findByCreatedByAndStatus(authUser, status);
         return taskMapper.toResponseList(response);
     }
 
-    public void delete(Long id) {
-        User user = authUser();
+    public void delete(Long id, User authUser) {
         Task task = taskRepository.findById(id)
-                .orElseThrow(() -> new NotFoundException("Tarefa não encontrada"));
+                .orElseThrow(() -> new NotFoundException(NOT_FOUND_MESSAGE));
 
-        validateOwnership(task, user);
+        validateOwnership(task, authUser);
 
         taskRepository.deleteById(id);
     }

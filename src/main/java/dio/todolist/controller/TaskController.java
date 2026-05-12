@@ -1,12 +1,14 @@
 package dio.todolist.controller;
 
 import dio.todolist.domain.TaskStatus;
+import dio.todolist.domain.User;
 import dio.todolist.dto.TaskRequest;
 import dio.todolist.dto.TaskResponse;
 import dio.todolist.dto.TaskUpdate;
 import dio.todolist.service.TaskService;
 import jakarta.validation.Valid;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
 import io.swagger.v3.oas.annotations.Operation;
@@ -36,8 +38,9 @@ public class TaskController {
             @ApiResponse(responseCode = "401", description = "Não autenticado")
     })
     @PostMapping
-    public ResponseEntity<TaskResponse> create(@RequestBody @Valid TaskRequest taskRequest) {
-        var response = taskService.create(taskRequest);
+    public ResponseEntity<TaskResponse> create(@RequestBody @Valid TaskRequest taskRequest,
+                                               @AuthenticationPrincipal User authUser) {
+        var response = taskService.create(taskRequest, authUser);
 
         URI uri = ServletUriComponentsBuilder.fromCurrentRequest()
                 .path("/{id}")
@@ -53,8 +56,8 @@ public class TaskController {
             @ApiResponse(responseCode = "401", description = "Não autenticado")
     })
     @GetMapping
-    public ResponseEntity<List<TaskResponse>> listAll() {
-        var response = taskService.listAll();
+    public ResponseEntity<List<TaskResponse>> listAll(@AuthenticationPrincipal User authUser) {
+        var response = taskService.listAll(authUser);
         return ResponseEntity.ok(response);
     }
 
@@ -67,8 +70,9 @@ public class TaskController {
             @ApiResponse(responseCode = "404", description = "Tarefa não encontrada")
     })
     @GetMapping("/findByTitle")
-    public ResponseEntity<TaskResponse> findByTitle(@RequestParam String title ) {
-        var response = taskService.findByTitle(title);
+    public ResponseEntity<TaskResponse> findByTitle(@RequestParam String title,
+                                                    @AuthenticationPrincipal User authUser) {
+        var response = taskService.findByTitle(title, authUser);
         return ResponseEntity.ok(response);
     }
 
@@ -78,8 +82,9 @@ public class TaskController {
             @ApiResponse(responseCode = "401", description = "Não autenticado")
     })
     @GetMapping("/status/{status}")
-    public ResponseEntity<List<TaskResponse>> listByStatus(@PathVariable TaskStatus status) {
-        var response = taskService.listByStatus(status);
+    public ResponseEntity<List<TaskResponse>> listByStatus(@PathVariable TaskStatus status,
+                                                           @AuthenticationPrincipal User authUser) {
+        var response = taskService.listByStatus(status, authUser);
         return ResponseEntity.ok(response);
     }
 
@@ -94,8 +99,9 @@ public class TaskController {
     })
     @PutMapping("/{id}")
     public ResponseEntity<TaskResponse> update(@PathVariable Long id,
-                                               @RequestBody @Valid TaskUpdate taskUpdate) {
-        var response = taskService.update(id, taskUpdate);
+                                               @RequestBody @Valid TaskUpdate taskUpdate,
+                                               @AuthenticationPrincipal User authUser) {
+        var response = taskService.update(id, taskUpdate, authUser);
         return ResponseEntity.ok(response);
     }
 
@@ -107,8 +113,9 @@ public class TaskController {
             @ApiResponse(responseCode = "404", description = "Tarefa não encontrada")
     })
     @DeleteMapping("/{id}")
-    public ResponseEntity<Void> delete(@PathVariable Long id) {
-        taskService.delete(id);
+    public ResponseEntity<Void> delete(@PathVariable Long id,
+                                       @AuthenticationPrincipal User authUser) {
+        taskService.delete(id, authUser);
         return ResponseEntity.noContent().build();
     }
 

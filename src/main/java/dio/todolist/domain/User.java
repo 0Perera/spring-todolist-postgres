@@ -1,6 +1,5 @@
 package dio.todolist.domain;
 
-import dio.todolist.dto.UserRequest;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
@@ -32,10 +31,4 @@ public class User {
     @OneToMany(cascade = CascadeType.ALL, mappedBy = "createdBy", fetch = FetchType.LAZY)
     private List<Task> taskList = new ArrayList<>();
 
-
-    public User(UserRequest userRequest) {
-        this.name = userRequest.name();
-        this.email = userRequest.email();
-        this.password = userRequest.password();
-    }
 }

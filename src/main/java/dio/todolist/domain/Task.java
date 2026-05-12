@@ -34,11 +34,6 @@ public class Task {
     @JoinColumn(name = "created_by_id", nullable = false)
     private User createdBy;
 
-    public Task(TaskRequest taskRequest) {
-        this.title = taskRequest.title();
-        this.description = taskRequest.description();
-    }
-
     @PrePersist
     public void prePersist() {
         if (dateCreated == null) {
