@@ -7,6 +7,8 @@ import dio.todolist.dto.TaskResponse;
 import dio.todolist.dto.TaskUpdate;
 import dio.todolist.service.TaskService;
 import jakarta.validation.Valid;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
@@ -56,8 +58,8 @@ public class TaskController {
             @ApiResponse(responseCode = "401", description = "Não autenticado")
     })
     @GetMapping
-    public ResponseEntity<List<TaskResponse>> listAll(@AuthenticationPrincipal User authUser) {
-        var response = taskService.listAll(authUser);
+    public ResponseEntity<Page<TaskResponse>> listAll(@AuthenticationPrincipal User authUser, Pageable pageable) {
+        var response = taskService.listAll(authUser, pageable);
         return ResponseEntity.ok(response);
     }
 
@@ -95,6 +97,7 @@ public class TaskController {
             @ApiResponse(responseCode = "200", description = "Tarefa atualizada com sucesso"),
             @ApiResponse(responseCode = "400", description = "Erro de validação"),
             @ApiResponse(responseCode = "401", description = "Não autenticado"),
+            @ApiResponse(responseCode = "403", description = "Sem permissão para alterar esta tarefa"),
             @ApiResponse(responseCode = "404", description = "Tarefa não encontrada")
     })
     @PutMapping("/{id}")
@@ -110,6 +113,7 @@ public class TaskController {
     @ApiResponses(value = {
             @ApiResponse(responseCode = "204", description = "Tarefa excluída com sucesso"),
             @ApiResponse(responseCode = "401", description = "Não autenticado"),
+            @ApiResponse(responseCode = "403", description = "Sem permissão para excluir esta tarefa"),
             @ApiResponse(responseCode = "404", description = "Tarefa não encontrada")
     })
     @DeleteMapping("/{id}")

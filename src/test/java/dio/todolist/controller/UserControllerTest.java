@@ -3,15 +3,18 @@ package dio.todolist.controller;
 import dio.todolist.dto.UserRequest;
 import dio.todolist.dto.UserResponse;
 import dio.todolist.dto.UserUpdate;
+import dio.todolist.handler.AccessDeniedException;
 import dio.todolist.handler.DuplicateEmailException;
 import dio.todolist.handler.NotFoundException;
+import dio.todolist.service.JwtService;
+import dio.todolist.service.UserDetailsServiceImpl;
 import dio.todolist.service.UserService;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.security.test.context.support.WithMockUser;
 import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
 import org.springframework.http.MediaType;
+import org.springframework.security.test.context.support.WithMockUser;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
@@ -22,8 +25,9 @@ import tools.jackson.databind.ObjectMapper;
 
 import java.util.Optional;
 
-import static org.mockito.Mockito.when;
+import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.doThrow;
+import static org.mockito.Mockito.when;
 
 @ActiveProfiles("test")
 @WebMvcTest(controllers = UserController.class)
@@ -43,157 +47,165 @@ class UserControllerTest {
     @MockitoBean
     UserService userService;
 
+    @MockitoBean
+    JwtService jwtService;
+
+    @MockitoBean
+    UserDetailsServiceImpl userDetailsService;
+
     private UserRequest createDefaultRequest() {
         return new UserRequest(DEFAULT_NAME, DEFAULT_EMAIL, DEFAULT_PASSWORD);
     }
 
     private UserResponse createDefaultResponse() {
-        return new UserResponse(
-                DEFAULT_ID,
-                DEFAULT_NAME,
-                DEFAULT_EMAIL
-        );
+        return new UserResponse(DEFAULT_ID, DEFAULT_NAME, DEFAULT_EMAIL);
     }
 
     @Test
     @DisplayName("Deve retornar 201 Created ao criar um usuário com dados válidos")
     void createCase1() throws Exception {
-        UserRequest createdRequest = createDefaultRequest();
+        UserRequest request = createDefaultRequest();
         UserResponse expectedResponse = createDefaultResponse();
-        String userJson = objectMapper.writeValueAsString(createdRequest);
+        String userJson = objectMapper.writeValueAsString(request);
 
-        when(userService.create(createdRequest)).thenReturn(expectedResponse);
+        when(userService.create(request)).thenReturn(expectedResponse);
 
         mockMvc.perform(MockMvcRequestBuilders.post("/user")
-                    .contentType(MediaType.APPLICATION_JSON)
-                    .content(userJson))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(userJson))
                 .andExpect(MockMvcResultMatchers.status().isCreated())
-                .andDo(MockMvcResultHandlers.print()
-                );
+                .andDo(MockMvcResultHandlers.print());
     }
 
     @Test
     @DisplayName("Deve retornar 400 Bad Request ao criar um usuário com dados inválidos")
     void createCase2() throws Exception {
-        UserRequest createdRequest = new UserRequest("", "", "");
-        String userJson = objectMapper.writeValueAsString(createdRequest);
+        String userJson = objectMapper.writeValueAsString(new UserRequest("", "", ""));
 
         mockMvc.perform(MockMvcRequestBuilders.post("/user")
-                    .contentType(MediaType.APPLICATION_JSON)
-                    .content(userJson))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(userJson))
                 .andExpect(MockMvcResultMatchers.status().isBadRequest())
-                .andDo(MockMvcResultHandlers.print()
-                );
+                .andDo(MockMvcResultHandlers.print());
     }
 
     @Test
-    @DisplayName("Deve retornar 409 Conflict ao criar um usuário com email já cadastrado")
+    @DisplayName("Deve retornar 409 Conflict ao criar usuário com email já cadastrado")
     void createCase3() throws Exception {
-        UserRequest createdRequest = createDefaultRequest();
-        String userJson = objectMapper.writeValueAsString(createdRequest);
+        UserRequest request = createDefaultRequest();
+        String userJson = objectMapper.writeValueAsString(request);
 
-        when(userService.create(createdRequest)).thenThrow(new DuplicateEmailException("Email já está em uso"));
+        when(userService.create(request)).thenThrow(new DuplicateEmailException("Email já está em uso"));
 
         mockMvc.perform(MockMvcRequestBuilders.post("/user")
-                    .contentType(MediaType.APPLICATION_JSON)
-                    .content(userJson))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(userJson))
                 .andExpect(MockMvcResultMatchers.status().isConflict())
                 .andDo(MockMvcResultHandlers.print());
     }
-    
+
     @Test
     @WithMockUser
-    @DisplayName("Deve retornar 200 OK ao buscar um usuário por ID existente")
+    @DisplayName("Deve retornar 200 OK ao buscar usuário por ID existente")
     void findByIdCase1() throws Exception {
-        UserResponse expectedResponse = createDefaultResponse();
-
-        when(userService.findById(DEFAULT_ID)).thenReturn(expectedResponse);
+        when(userService.findById(eq(DEFAULT_ID), any())).thenReturn(createDefaultResponse());
 
         mockMvc.perform(MockMvcRequestBuilders.get("/user/" + DEFAULT_ID)
-                    .contentType(MediaType.APPLICATION_JSON))
+                        .contentType(MediaType.APPLICATION_JSON))
                 .andExpect(MockMvcResultMatchers.status().isOk())
                 .andDo(MockMvcResultHandlers.print());
     }
 
     @Test
     @WithMockUser
-    @DisplayName("Deve retornar 404 Not Found ao buscar um usuário por ID inexistente")
-    void findByIdCase2() throws Exception {
-        when(userService.findById(DEFAULT_ID)).thenThrow(new NotFoundException("Usuário não encontrado"));
+    @DisplayName("Deve retornar 403 Forbidden ao tentar acessar dados de outro usuário")
+    void findByIdCase3() throws Exception {
+        when(userService.findById(eq(DEFAULT_ID), any())).thenThrow(new AccessDeniedException("Sem permissão"));
 
         mockMvc.perform(MockMvcRequestBuilders.get("/user/" + DEFAULT_ID)
-                    .contentType(MediaType.APPLICATION_JSON))
+                        .contentType(MediaType.APPLICATION_JSON))
+                .andExpect(MockMvcResultMatchers.status().isForbidden())
+                .andDo(MockMvcResultHandlers.print());
+    }
+
+    @Test
+    @WithMockUser
+    @DisplayName("Deve retornar 404 Not Found ao buscar usuário por ID inexistente")
+    void findByIdCase2() throws Exception {
+        when(userService.findById(eq(DEFAULT_ID), any())).thenThrow(new NotFoundException("Usuário não encontrado"));
+
+        mockMvc.perform(MockMvcRequestBuilders.get("/user/" + DEFAULT_ID)
+                        .contentType(MediaType.APPLICATION_JSON))
                 .andExpect(MockMvcResultMatchers.status().isNotFound())
                 .andDo(MockMvcResultHandlers.print());
     }
 
     @Test
     @WithMockUser
-    @DisplayName("Deve retornar 200 OK ao atualizar um usuário com dados válidos")
+    @DisplayName("Deve retornar 200 OK ao atualizar usuário com dados válidos")
     void updateCase1() throws Exception {
         UserUpdate updateRequest = new UserUpdate(
                 Optional.of("Felipe Souza"),
                 Optional.of("felipe.souza@dev.com"),
-                Optional.of("novaSenha123")
-        );
-        UserResponse expectedResponse = new UserResponse(
-                DEFAULT_ID,
-                "Felipe Souza",
-                "felipe.souza@dev.com"
-        );
+                Optional.of("novaSenha123"));
+        UserResponse expectedResponse = new UserResponse(DEFAULT_ID, "Felipe Souza", "felipe.souza@dev.com");
         String userJson = objectMapper.writeValueAsString(updateRequest);
 
-        when(userService.update(DEFAULT_ID, updateRequest)).thenReturn(expectedResponse);
+        when(userService.update(eq(DEFAULT_ID), any(UserUpdate.class), any())).thenReturn(expectedResponse);
 
         mockMvc.perform(MockMvcRequestBuilders.put("/user/" + DEFAULT_ID)
-                    .contentType(MediaType.APPLICATION_JSON)
-                    .content(userJson))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(userJson))
                 .andExpect(MockMvcResultMatchers.status().isOk())
                 .andDo(MockMvcResultHandlers.print());
     }
 
     @Test
     @WithMockUser
-    @DisplayName("Deve retornar 200 OK ao atualizar apenas o nome de um usuário")
+    @DisplayName("Deve retornar 200 OK ao atualizar apenas o nome do usuário")
     void updateCase2() throws Exception {
-        UserUpdate updateRequest = new UserUpdate(
-                Optional.of("Felipe Souza"),
-                Optional.empty(),
-                Optional.empty()
-        );
-        UserResponse expectedResponse = new UserResponse(
-                DEFAULT_ID,
-                "Felipe Souza",
-                DEFAULT_EMAIL
-        );
+        UserUpdate updateRequest = new UserUpdate(Optional.of("Felipe Souza"), Optional.empty(), Optional.empty());
+        UserResponse expectedResponse = new UserResponse(DEFAULT_ID, "Felipe Souza", DEFAULT_EMAIL);
         String userJson = objectMapper.writeValueAsString(updateRequest);
 
-        when(userService.update(DEFAULT_ID, updateRequest)).thenReturn(expectedResponse);
+        when(userService.update(eq(DEFAULT_ID), any(UserUpdate.class), any())).thenReturn(expectedResponse);
 
         mockMvc.perform(MockMvcRequestBuilders.put("/user/" + DEFAULT_ID)
-                    .contentType(MediaType.APPLICATION_JSON)
-                    .content(userJson))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(userJson))
                 .andExpect(MockMvcResultMatchers.status().isOk())
                 .andDo(MockMvcResultHandlers.print());
     }
 
     @Test
     @WithMockUser
-    @DisplayName("Deve retornar 404 Not Found ao atualizar um usuário inexistente")
+    @DisplayName("Deve retornar 404 Not Found ao atualizar usuário inexistente")
     void updateCase3() throws Exception {
-        UserUpdate updateRequest = new UserUpdate(
-                Optional.of("Felipe Souza"),
-                Optional.of("felipe.souza@dev.com"),
-                Optional.of("novaSenha123")
-        );
+        UserUpdate updateRequest = new UserUpdate(Optional.of("Felipe Souza"), Optional.of("felipe.souza@dev.com"), Optional.of("novaSenha123"));
         String userJson = objectMapper.writeValueAsString(updateRequest);
 
-        when(userService.update(DEFAULT_ID, updateRequest)).thenThrow(new NotFoundException("Usuário não encontrado"));
+        when(userService.update(eq(DEFAULT_ID), any(UserUpdate.class), any())).thenThrow(new NotFoundException("Usuário não encontrado"));
 
         mockMvc.perform(MockMvcRequestBuilders.put("/user/" + DEFAULT_ID)
-                    .contentType(MediaType.APPLICATION_JSON)
-                    .content(userJson))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(userJson))
                 .andExpect(MockMvcResultMatchers.status().isNotFound())
+                .andDo(MockMvcResultHandlers.print());
+    }
+
+    @Test
+    @WithMockUser
+    @DisplayName("Deve retornar 403 Forbidden ao tentar atualizar dados de outro usuário")
+    void updateCase5() throws Exception {
+        UserUpdate updateRequest = new UserUpdate(Optional.of("Felipe Souza"), Optional.empty(), Optional.empty());
+        String userJson = objectMapper.writeValueAsString(updateRequest);
+
+        when(userService.update(eq(DEFAULT_ID), any(UserUpdate.class), any())).thenThrow(new AccessDeniedException("Sem permissão"));
+
+        mockMvc.perform(MockMvcRequestBuilders.put("/user/" + DEFAULT_ID)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(userJson))
+                .andExpect(MockMvcResultMatchers.status().isForbidden())
                 .andDo(MockMvcResultHandlers.print());
     }
 
@@ -201,25 +213,21 @@ class UserControllerTest {
     @WithMockUser
     @DisplayName("Deve retornar 409 Conflict ao atualizar para email já usado por outro usuário")
     void updateCase4() throws Exception {
-        UserUpdate updateRequest = new UserUpdate(
-                Optional.empty(),
-                Optional.of(DEFAULT_EMAIL),
-                Optional.empty()
-        );
+        UserUpdate updateRequest = new UserUpdate(Optional.empty(), Optional.of(DEFAULT_EMAIL), Optional.empty());
         String userJson = objectMapper.writeValueAsString(updateRequest);
 
-        when(userService.update(DEFAULT_ID, updateRequest)).thenThrow(new DuplicateEmailException("Email já está em uso"));
+        when(userService.update(eq(DEFAULT_ID), any(UserUpdate.class), any())).thenThrow(new DuplicateEmailException("Email já está em uso"));
 
         mockMvc.perform(MockMvcRequestBuilders.put("/user/" + DEFAULT_ID)
-                    .contentType(MediaType.APPLICATION_JSON)
-                    .content(userJson))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(userJson))
                 .andExpect(MockMvcResultMatchers.status().isConflict())
                 .andDo(MockMvcResultHandlers.print());
     }
 
     @Test
     @WithMockUser
-    @DisplayName("Deve retornar 204 No Content ao deletar um usuário existente")
+    @DisplayName("Deve retornar 204 No Content ao deletar usuário existente")
     void deleteCase1() throws Exception {
         mockMvc.perform(MockMvcRequestBuilders.delete("/user/" + DEFAULT_ID))
                 .andExpect(MockMvcResultMatchers.status().isNoContent())
@@ -228,14 +236,23 @@ class UserControllerTest {
 
     @Test
     @WithMockUser
-    @DisplayName("Deve retornar 404 Not Found ao deletar um usuário inexistente")
+    @DisplayName("Deve retornar 403 Forbidden ao tentar deletar conta de outro usuário")
+    void deleteCase3() throws Exception {
+        doThrow(new AccessDeniedException("Sem permissão")).when(userService).delete(eq(DEFAULT_ID), any());
+
+        mockMvc.perform(MockMvcRequestBuilders.delete("/user/" + DEFAULT_ID))
+                .andExpect(MockMvcResultMatchers.status().isForbidden())
+                .andDo(MockMvcResultHandlers.print());
+    }
+
+    @Test
+    @WithMockUser
+    @DisplayName("Deve retornar 404 Not Found ao deletar usuário inexistente")
     void deleteCase2() throws Exception {
-        doThrow(new NotFoundException("Usuário não encontrado")).when(userService).delete(DEFAULT_ID);
+        doThrow(new NotFoundException("Usuário não encontrado")).when(userService).delete(eq(DEFAULT_ID), any());
 
         mockMvc.perform(MockMvcRequestBuilders.delete("/user/" + DEFAULT_ID))
                 .andExpect(MockMvcResultMatchers.status().isNotFound())
                 .andDo(MockMvcResultHandlers.print());
     }
-
 }
-

@@ -25,22 +25,22 @@ public class SwaggerConfig {
                         .description("""
                                 ### Bem-vindo à API de Gerenciamento de Tarefas!
 
-                                Esta API permite que usuários gerenciem suas listas de tarefas diárias de forma segura e prática.
+                                Esta API utiliza autenticação via **JWT (Bearer Token)**.
 
 
-                                **📌 Fluxo Sugerido para Primeiros Passos:**
-                                
+                                **Fluxo Sugerido para Primeiros Passos:**
+
                                 1. **Cadastro**: Acesse a aba **Usuários (`/user`)** e crie uma nova conta usando o método `POST`.
-                                
-                                2. **Autenticação**: Não se esqueça de clicar no botão **Authorize** (no topo) para configurar o esquema `basicAuth` com o e-mail e senha que você acabou de criar.
-                                
-                                3. **Acesso**: Uma vez autenticado, você já pode acessar a rota **Autenticação (`/auth/login`)** ou tentar consumir os endpoints protegidos.
-                                
+
+                                2. **Login**: Use a rota **`/auth/login`** com seu e-mail e senha. A resposta retornará um token JWT.
+
+                                3. **Autenticação**: Clique no botão **Authorize** (no topo) e cole o token JWT no campo `bearerAuth` (sem o prefixo "Bearer").
+
                                 4. **Gestão de Tarefas**: Crie suas tarefas em **Tarefas (`/task`)** pelo método `POST`. Após isso, teste buscar todas (`GET`), atualizar status (`PUT`) ou buscar por título (`GET /findByTitle`).
-                               
+
                                 """)
                 )
-        .addSecurityItem(new SecurityRequirement().addList("basicAuth"));
+        .addSecurityItem(new SecurityRequirement().addList("bearerAuth"));
     }
 
     @Bean

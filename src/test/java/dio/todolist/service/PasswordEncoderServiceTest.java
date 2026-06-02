@@ -2,27 +2,26 @@ package dio.todolist.service;
 
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.test.context.bean.override.mockito.MockitoBean;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.InjectMocks;
+import org.mockito.Mock;
+import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.security.crypto.password.PasswordEncoder;
-import org.springframework.test.context.ActiveProfiles;
 
 import static org.junit.jupiter.api.Assertions.*;
-import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;
 
-@SpringBootTest
-@ActiveProfiles("test")
+@ExtendWith(MockitoExtension.class)
 class PasswordEncoderServiceTest {
 
     private static final String RAW_PASSWORD = "senha123";
     private static final String ENCODED_PASSWORD = "$2a$10$encodedpassword";
 
-    @MockitoBean
+    @Mock
     PasswordEncoder passwordEncoder;
 
-    @Autowired
+    @InjectMocks
     PasswordEncoderService passwordEncoderService;
 
     @Test
@@ -33,18 +32,15 @@ class PasswordEncoderServiceTest {
         String result = passwordEncoderService.encode(RAW_PASSWORD);
 
         assertEquals(ENCODED_PASSWORD, result);
-        verify(passwordEncoder, times(1)).encode(RAW_PASSWORD);
+        verify(passwordEncoder).encode(RAW_PASSWORD);
     }
 
     @Test
     @DisplayName("Deve retornar diferentes hashes para mesma senha")
     void encodeCase2() {
-        String encodedPassword1 = "$2a$10$encodedpassword1";
-        String encodedPassword2 = "$2a$10$encodedpassword2";
-
         when(passwordEncoder.encode(RAW_PASSWORD))
-                .thenReturn(encodedPassword1)
-                .thenReturn(encodedPassword2);
+                .thenReturn("$2a$10$encodedpassword1")
+                .thenReturn("$2a$10$encodedpassword2");
 
         String result1 = passwordEncoderService.encode(RAW_PASSWORD);
         String result2 = passwordEncoderService.encode(RAW_PASSWORD);
@@ -61,20 +57,18 @@ class PasswordEncoderServiceTest {
         boolean result = passwordEncoderService.matches(RAW_PASSWORD, ENCODED_PASSWORD);
 
         assertTrue(result);
-        verify(passwordEncoder, times(1)).matches(RAW_PASSWORD, ENCODED_PASSWORD);
+        verify(passwordEncoder).matches(RAW_PASSWORD, ENCODED_PASSWORD);
     }
 
     @Test
     @DisplayName("Deve rejeitar uma senha que não corresponde ao hash")
     void matchesCase2() {
-        String wrongPassword = "senhaErrada";
+        when(passwordEncoder.matches("senhaErrada", ENCODED_PASSWORD)).thenReturn(false);
 
-        when(passwordEncoder.matches(wrongPassword, ENCODED_PASSWORD)).thenReturn(false);
-
-        boolean result = passwordEncoderService.matches(wrongPassword, ENCODED_PASSWORD);
+        boolean result = passwordEncoderService.matches("senhaErrada", ENCODED_PASSWORD);
 
         assertFalse(result);
-        verify(passwordEncoder, times(1)).matches(wrongPassword, ENCODED_PASSWORD);
+        verify(passwordEncoder).matches("senhaErrada", ENCODED_PASSWORD);
     }
 
     @Test
@@ -84,14 +78,9 @@ class PasswordEncoderServiceTest {
         when(passwordEncoder.matches("senhaErrada1", ENCODED_PASSWORD)).thenReturn(false);
         when(passwordEncoder.matches("senhaErrada2", ENCODED_PASSWORD)).thenReturn(false);
 
-        boolean result1 = passwordEncoderService.matches(RAW_PASSWORD, ENCODED_PASSWORD);
-        boolean result2 = passwordEncoderService.matches("senhaErrada1", ENCODED_PASSWORD);
-        boolean result3 = passwordEncoderService.matches("senhaErrada2", ENCODED_PASSWORD);
-
-        assertTrue(result1);
-        assertFalse(result2);
-        assertFalse(result3);
+        assertTrue(passwordEncoderService.matches(RAW_PASSWORD, ENCODED_PASSWORD));
+        assertFalse(passwordEncoderService.matches("senhaErrada1", ENCODED_PASSWORD));
+        assertFalse(passwordEncoderService.matches("senhaErrada2", ENCODED_PASSWORD));
         verify(passwordEncoder, times(3)).matches(anyString(), eq(ENCODED_PASSWORD));
     }
 }
-

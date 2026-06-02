@@ -1,56 +1,51 @@
 package dio.todolist.service;
 
+import dio.todolist.domain.Task;
 import dio.todolist.domain.TaskStatus;
 import dio.todolist.domain.User;
 import dio.todolist.dto.TaskRequest;
 import dio.todolist.dto.TaskResponse;
-import dio.todolist.domain.Task;
 import dio.todolist.dto.TaskUpdate;
 import dio.todolist.handler.AccessDeniedException;
 import dio.todolist.handler.NotFoundException;
 import dio.todolist.mapper.TaskMapper;
 import dio.todolist.repository.TaskRepository;
-import dio.todolist.repository.UserRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.security.test.context.support.WithMockUser;
-import org.springframework.test.context.bean.override.mockito.MockitoBean;
-
-import org.springframework.test.context.ActiveProfiles;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.InjectMocks;
+import org.mockito.Mock;
+import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.Pageable;
 
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.*;
-import static org.mockito.Mockito.*;
 import static org.mockito.ArgumentMatchers.*;
+import static org.mockito.Mockito.*;
 
-@ActiveProfiles("test")
-@SpringBootTest
-@WithMockUser(username = "felipe@dev.com")
+@ExtendWith(MockitoExtension.class)
 class TaskServiceTest {
 
     private static final Long DEFAULT_USER_ID = 1L;
-    private static final String DEFAULT_USER_USERNAME = "felipe@dev.com";
+    private static final String DEFAULT_USER_EMAIL = "felipe@dev.com";
     private static final Long NOT_FOUND_ID = 9999L;
     private static final Long DEFAULT_ID = 1L;
     private static final String DEFAULT_TITLE = "Estudar Spring Boot";
     private static final String DEFAULT_DESCRIPTION = "Estudar por 5 horas";
 
-    @MockitoBean
+    @Mock
     TaskRepository taskRepository;
 
-    @MockitoBean
+    @Mock
     TaskMapper taskMapper;
 
-    @MockitoBean
-    UserRepository userRepository;
-
-    @Autowired
+    @InjectMocks
     TaskService taskService;
 
     private User authUser;
@@ -67,8 +62,11 @@ class TaskServiceTest {
     }
 
     private Task createDefaultEntity() {
-        Task task = new Task(createDefaultRequest());
+        Task task = new Task();
         task.setId(DEFAULT_ID);
+        task.setTitle(DEFAULT_TITLE);
+        task.setDescription(DEFAULT_DESCRIPTION);
+        task.setStatus(TaskStatus.PENDENTE);
         return task;
     }
 
@@ -82,137 +80,133 @@ class TaskServiceTest {
 
     @BeforeEach
     void setUp() {
-        User user = new User();
-        user.setId(DEFAULT_USER_ID);
-        user.setEmail(DEFAULT_USER_USERNAME);
-
-        authUser = user;
-
-        when(userRepository.findByEmail(DEFAULT_USER_USERNAME)).thenReturn(Optional.of(authUser));
+        authUser = new User();
+        authUser.setId(DEFAULT_USER_ID);
+        authUser.setEmail(DEFAULT_USER_EMAIL);
     }
 
     @Test
     @DisplayName("Deve criar uma tarefa com sucesso")
     void createCase1() {
-        TaskRequest createdRequest = createDefaultRequest();
-        Task createdTask = createDefaultEntity();
+        TaskRequest request = createDefaultRequest();
+        Task entity = createDefaultEntity();
         TaskResponse expectedResponse = createDefaultResponse();
 
-        when(taskMapper.toEntity(createdRequest)).thenReturn(createdTask);
-        when(taskRepository.save(any(Task.class))).thenReturn(createdTask);
-        when(taskMapper.toResponse(createdTask)).thenReturn(expectedResponse);
+        when(taskMapper.toEntity(request)).thenReturn(entity);
+        when(taskRepository.save(any(Task.class))).thenReturn(entity);
+        when(taskMapper.toResponse(entity)).thenReturn(expectedResponse);
 
-        TaskResponse result = taskService.create(createdRequest);
+        TaskResponse result = taskService.create(request, authUser);
 
         assertEquals(expectedResponse, result);
-        verify(taskMapper, times(1)).toEntity(createdRequest);
-        verify(taskRepository, times(1)).save(any(Task.class));
-        verify(taskMapper, times(1)).toResponse(createdTask);
+        verify(taskMapper).toEntity(request);
+        verify(taskRepository).save(any(Task.class));
+        verify(taskMapper).toResponse(entity);
     }
 
     @Test
     @DisplayName("Deve criar uma tarefa sem descrição")
     void createCase2() {
-        TaskRequest createdRequest = new TaskRequest(DEFAULT_TITLE, null);
-        Task createdTask = createDefaultEntity();
+        TaskRequest request = new TaskRequest(DEFAULT_TITLE, null);
+        Task entity = createDefaultEntity();
+        entity.setDescription(null);
         TaskResponse expectedResponse = createDefaultResponse();
 
-        when(taskMapper.toEntity(createdRequest)).thenReturn(createdTask);
-        when(taskRepository.save(createdTask)).thenReturn(createdTask);
-        when(taskMapper.toResponse(createdTask)).thenReturn(expectedResponse);
+        when(taskMapper.toEntity(request)).thenReturn(entity);
+        when(taskRepository.save(entity)).thenReturn(entity);
+        when(taskMapper.toResponse(entity)).thenReturn(expectedResponse);
 
-        TaskResponse result = taskService.create(createdRequest);
+        TaskResponse result = taskService.create(request, authUser);
 
         assertEquals(expectedResponse, result);
-        verify(taskMapper, times(1)).toEntity(createdRequest);
-        verify(taskRepository, times(1)).save(createdTask);
-        verify(taskMapper, times(1)).toResponse(createdTask);
+        verify(taskMapper).toEntity(request);
+        verify(taskRepository).save(entity);
+        verify(taskMapper).toResponse(entity);
     }
 
     @Test
     @DisplayName("Deve encontrar uma tarefa por título com sucesso")
-    void findByTitleCase1(){
-        Task createdTask = createDefaultEntity();
+    void findByTitleCase1() {
+        Task entity = createDefaultEntity();
         TaskResponse expectedResponse = createDefaultResponse();
 
-        when(taskRepository.findByTitleAndCreatedBy(eq(DEFAULT_TITLE), any(User.class))).thenReturn(Optional.of(createdTask));
-        when(taskMapper.toResponse(createdTask)).thenReturn(expectedResponse);
+        when(taskRepository.findByTitleAndCreatedBy(DEFAULT_TITLE, authUser)).thenReturn(Optional.of(entity));
+        when(taskMapper.toResponse(entity)).thenReturn(expectedResponse);
 
-        TaskResponse result = taskService.findByTitle(DEFAULT_TITLE);
+        TaskResponse result = taskService.findByTitle(DEFAULT_TITLE, authUser);
 
         assertEquals(expectedResponse, result);
-        verify(taskRepository, times(1)).findByTitleAndCreatedBy(eq(DEFAULT_TITLE), any(User.class));
-        verify(taskMapper, times(1)).toResponse(createdTask);
+        verify(taskRepository).findByTitleAndCreatedBy(DEFAULT_TITLE, authUser);
+        verify(taskMapper).toResponse(entity);
     }
 
     @Test
     @DisplayName("Deve lançar NotFoundException quando não encontrar tarefa por título")
-    void findByTitleCase2(){
-        when(taskRepository.findByTitleAndCreatedBy(eq(DEFAULT_TITLE), any(User.class))).thenReturn(Optional.empty());
+    void findByTitleCase2() {
+        when(taskRepository.findByTitleAndCreatedBy(DEFAULT_TITLE, authUser)).thenReturn(Optional.empty());
 
-        assertThrows(NotFoundException.class, () -> taskService.findByTitle(DEFAULT_TITLE));
-        verify(taskRepository, times(1)).findByTitleAndCreatedBy(eq(DEFAULT_TITLE), any(User.class));
+        assertThrows(NotFoundException.class, () -> taskService.findByTitle(DEFAULT_TITLE, authUser));
+        verify(taskRepository).findByTitleAndCreatedBy(DEFAULT_TITLE, authUser);
     }
 
     @Test
     @DisplayName("Deve listar todas as tarefas do usuário autenticado")
-    void listAllCase1(){
-        Task createdTask = createDefaultEntity();
+    void listAllCase1() {
+        Task entity = createDefaultEntity();
         TaskResponse expectedResponse = createDefaultResponse();
-        List<Task> taskList = List.of(createdTask);
-        List<TaskResponse> expectedResponseList = List.of(expectedResponse);
+        Page<Task> taskPage = new PageImpl<>(List.of(entity));
 
-        when(taskRepository.findByCreatedBy(any(User.class))).thenReturn(taskList);
-        when(taskMapper.toResponseList(taskList)).thenReturn(expectedResponseList);
+        when(taskRepository.findByCreatedBy(eq(authUser), any(Pageable.class))).thenReturn(taskPage);
+        when(taskMapper.toResponse(entity)).thenReturn(expectedResponse);
 
-        List<TaskResponse> result = taskService.listAll();
+        Page<TaskResponse> result = taskService.listAll(authUser, Pageable.unpaged());
 
-        assertEquals(expectedResponseList, result);
-        verify(taskRepository, times(1)).findByCreatedBy(any(User.class));
-        verify(taskMapper, times(1)).toResponseList(taskList);
+        assertEquals(1, result.getTotalElements());
+        assertEquals(expectedResponse, result.getContent().get(0));
+        verify(taskRepository).findByCreatedBy(eq(authUser), any(Pageable.class));
     }
 
     @Test
-    @DisplayName("Deve retornar lista vazia quando usuário autenticado não tiver tarefas")
-    void listAllCase2(){
-        when(taskRepository.findByCreatedBy(any(User.class))).thenReturn(List.of());
-        when(taskMapper.toResponseList(List.of())).thenReturn(List.of());
+    @DisplayName("Deve retornar lista vazia quando usuário não tiver tarefas")
+    void listAllCase2() {
+        when(taskRepository.findByCreatedBy(eq(authUser), any(Pageable.class))).thenReturn(new PageImpl<>(List.of()));
 
-        List<TaskResponse> result = taskService.listAll();
+        Page<TaskResponse> result = taskService.listAll(authUser, Pageable.unpaged());
 
-        assertEquals(List.of(), result);
-        verify(taskRepository, times(1)).findByCreatedBy(any(User.class));
+        assertTrue(result.isEmpty());
+        verify(taskRepository).findByCreatedBy(eq(authUser), any(Pageable.class));
     }
 
     @Test
-    @DisplayName("Deve atualizar o status de uma tarefa com sucesso")
+    @DisplayName("Deve atualizar apenas os campos presentes (description e status) e ignorar Optional.empty()")
     void updateCase1() {
-        TaskUpdate updateRequest = createDefaultUpdate();
-        Task createdTask = createDefaultEntity();
-        createdTask.setCreatedBy(this.authUser);
+        TaskUpdate updateRequest = createDefaultUpdate(); // title=empty, description="Estudar por 3 horas", status=CONCLUIDA
+        Task entity = createDefaultEntity(); // title=DEFAULT_TITLE, status=PENDENTE
+        entity.setCreatedBy(authUser);
         TaskResponse expectedResponse = createDefaultResponse();
 
-        when(taskRepository.findById(DEFAULT_ID)).thenReturn(Optional.of(createdTask));
-        when(taskRepository.save(createdTask)).thenAnswer(invocation -> invocation.getArgument(0));
-        when(taskMapper.toResponse(createdTask)).thenReturn(expectedResponse);
+        when(taskRepository.findById(DEFAULT_ID)).thenReturn(Optional.of(entity));
+        when(taskRepository.save(entity)).thenReturn(entity);
+        when(taskMapper.toResponse(entity)).thenReturn(expectedResponse);
 
-        TaskResponse result = taskService.update(createdTask.getId(), updateRequest);
+        TaskResponse result = taskService.update(DEFAULT_ID, updateRequest, authUser);
 
+        assertEquals(DEFAULT_TITLE, entity.getTitle()); // Optional.empty() — não deve ter mudado
+        assertEquals("Estudar por 3 horas", entity.getDescription()); // deve ter sido aplicado
+        assertEquals(TaskStatus.CONCLUIDA, entity.getStatus()); // deve ter sido aplicado
         assertEquals(expectedResponse, result);
-        verify(taskRepository, times(1)).findById(DEFAULT_ID);
-        verify(taskRepository, times(1)).save(createdTask);
-        verify(taskMapper, times(1)).toResponse(createdTask);
+        verify(taskRepository).findById(DEFAULT_ID);
+        verify(taskRepository).save(entity);
+        verify(taskMapper).toResponse(entity);
     }
 
     @Test
     @DisplayName("Deve lançar NotFoundException ao tentar atualizar tarefa inexistente")
-    void updateCase2(){
-        TaskUpdate updateRequest = createDefaultUpdate();
-
+    void updateCase2() {
         when(taskRepository.findById(NOT_FOUND_ID)).thenReturn(Optional.empty());
 
-        assertThrows(NotFoundException.class, () -> taskService.update(NOT_FOUND_ID, updateRequest));
-        verify(taskRepository, times(1)).findById(NOT_FOUND_ID);
+        assertThrows(NotFoundException.class, () -> taskService.update(NOT_FOUND_ID, createDefaultUpdate(), authUser));
+        verify(taskRepository).findById(NOT_FOUND_ID);
     }
 
     @Test
@@ -220,77 +214,67 @@ class TaskServiceTest {
     void updateCase3() {
         User differentUser = new User();
         differentUser.setId(999L);
-        differentUser.setEmail("outro@dev.com");
+        Task task = createDefaultEntity();
+        task.setCreatedBy(differentUser);
 
-        Task taskFromAnotherUser = createDefaultEntity();
-        taskFromAnotherUser.setCreatedBy(differentUser);
+        when(taskRepository.findById(DEFAULT_ID)).thenReturn(Optional.of(task));
 
-        TaskUpdate updateRequest = createDefaultUpdate();
-
-        when(taskRepository.findById(DEFAULT_ID)).thenReturn(Optional.of(taskFromAnotherUser));
-
-        assertThrows(AccessDeniedException.class,
-                () -> taskService.update(DEFAULT_ID, updateRequest));
-        verify(taskRepository, times(1)).findById(DEFAULT_ID);
-        verify(taskRepository, never()).save(any(Task.class));
+        assertThrows(AccessDeniedException.class, () -> taskService.update(DEFAULT_ID, createDefaultUpdate(), authUser));
+        verify(taskRepository).findById(DEFAULT_ID);
+        verify(taskRepository, never()).save(any());
     }
 
     @Test
     @DisplayName("Deve listar tarefas por status com sucesso")
     void listByStatusCase1() {
-        Task createdTask = createDefaultEntity();
+        Task entity = createDefaultEntity();
         TaskResponse expectedResponse = createDefaultResponse();
-        List<TaskResponse> expectedResponseList = List.of(expectedResponse);
+        List<TaskResponse> expectedList = List.of(expectedResponse);
 
-        when(taskRepository.findByCreatedByAndStatus(any(User.class), eq(TaskStatus.PENDENTE)))
-                .thenReturn(List.of(createdTask));
-        when(taskMapper.toResponseList(List.of(createdTask)))
-                .thenReturn(expectedResponseList);
+        when(taskRepository.findByCreatedByAndStatus(authUser, TaskStatus.PENDENTE)).thenReturn(List.of(entity));
+        when(taskMapper.toResponseList(List.of(entity))).thenReturn(expectedList);
 
-        List<TaskResponse> result = taskService.listByStatus(TaskStatus.PENDENTE);
+        List<TaskResponse> result = taskService.listByStatus(TaskStatus.PENDENTE, authUser);
 
-        assertEquals(expectedResponseList, result);
-        verify(taskRepository, times(1)).findByCreatedByAndStatus(any(User.class), eq(TaskStatus.PENDENTE));
-        verify(taskMapper, times(1)).toResponseList(List.of(createdTask));
+        assertEquals(expectedList, result);
+        verify(taskRepository).findByCreatedByAndStatus(authUser, TaskStatus.PENDENTE);
+        verify(taskMapper).toResponseList(List.of(entity));
     }
 
     @Test
     @DisplayName("Deve retornar lista vazia quando não houver tarefas com o status especificado")
     void listByStatusCase2() {
-        when(taskRepository.findByCreatedByAndStatus(any(User.class), eq(TaskStatus.CONCLUIDA)))
-                .thenReturn(List.of());
-        when(taskMapper.toResponseList(List.of()))
-                .thenReturn(List.of());
+        when(taskRepository.findByCreatedByAndStatus(authUser, TaskStatus.CONCLUIDA)).thenReturn(List.of());
+        when(taskMapper.toResponseList(List.of())).thenReturn(List.of());
 
-        List<TaskResponse> result = taskService.listByStatus(TaskStatus.CONCLUIDA);
+        List<TaskResponse> result = taskService.listByStatus(TaskStatus.CONCLUIDA, authUser);
 
-        assertEquals(List.of(), result);
-        verify(taskRepository, times(1)).findByCreatedByAndStatus(any(User.class), eq(TaskStatus.CONCLUIDA));
-        verify(taskMapper, times(1)).toResponseList(List.of());
+        assertTrue(result.isEmpty());
+        verify(taskRepository).findByCreatedByAndStatus(authUser, TaskStatus.CONCLUIDA);
     }
 
     @Test
     @DisplayName("Deve deletar uma tarefa com sucesso")
     void deleteCase1() {
-        Task createdTask = createDefaultEntity();
-        createdTask.setCreatedBy(this.authUser);
+        Task entity = createDefaultEntity();
+        entity.setCreatedBy(authUser);
 
-        when(taskRepository.findById(DEFAULT_ID)).thenReturn(Optional.of(createdTask));
+        when(taskRepository.findById(DEFAULT_ID)).thenReturn(Optional.of(entity));
         doNothing().when(taskRepository).deleteById(DEFAULT_ID);
 
-        taskService.delete(DEFAULT_ID);
+        taskService.delete(DEFAULT_ID, authUser);
 
-        verify(taskRepository, times(1)).findById(DEFAULT_ID);
-        verify(taskRepository, times(1)).deleteById(DEFAULT_ID);
+        verify(taskRepository).findById(DEFAULT_ID);
+        verify(taskRepository).deleteById(DEFAULT_ID);
     }
 
     @Test
     @DisplayName("Deve lançar NotFoundException ao tentar deletar tarefa inexistente")
-    void deleteCase2(){
+    void deleteCase2() {
         when(taskRepository.findById(NOT_FOUND_ID)).thenReturn(Optional.empty());
 
-        assertThrows(NotFoundException.class, () -> taskService.delete(NOT_FOUND_ID));
-        verify(taskRepository, times(1)).findById(NOT_FOUND_ID);
+        assertThrows(NotFoundException.class, () -> taskService.delete(NOT_FOUND_ID, authUser));
+        verify(taskRepository).findById(NOT_FOUND_ID);
     }
 
     @Test
@@ -298,18 +282,13 @@ class TaskServiceTest {
     void deleteCase3() {
         User differentUser = new User();
         differentUser.setId(999L);
-        differentUser.setEmail("outro@dev.com");
+        Task task = createDefaultEntity();
+        task.setCreatedBy(differentUser);
 
-        Task taskFromAnotherUser = createDefaultEntity();
-        taskFromAnotherUser.setCreatedBy(differentUser);
+        when(taskRepository.findById(DEFAULT_ID)).thenReturn(Optional.of(task));
 
-        when(taskRepository.findById(DEFAULT_ID)).thenReturn(Optional.of(taskFromAnotherUser));
-
-        assertThrows(AccessDeniedException.class,
-                () -> taskService.delete(DEFAULT_ID));
-        verify(taskRepository, times(1)).findById(DEFAULT_ID);
+        assertThrows(AccessDeniedException.class, () -> taskService.delete(DEFAULT_ID, authUser));
+        verify(taskRepository).findById(DEFAULT_ID);
         verify(taskRepository, never()).deleteById(any());
     }
-
-
 }

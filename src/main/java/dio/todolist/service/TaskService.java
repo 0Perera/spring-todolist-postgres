@@ -10,6 +10,8 @@ import dio.todolist.dto.TaskResponse;
 import dio.todolist.dto.TaskUpdate;
 import dio.todolist.mapper.TaskMapper;
 import dio.todolist.repository.TaskRepository;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
@@ -47,9 +49,9 @@ public class TaskService {
         return taskMapper.toResponse(task);
     }
 
-    public List<TaskResponse> listAll(User authUser) {
-        var response = taskRepository.findByCreatedBy(authUser);
-        return taskMapper.toResponseList(response);
+    public Page<TaskResponse> listAll(User authUser, Pageable pageable) {
+        var response = taskRepository.findByCreatedBy(authUser, pageable);
+        return response.map(taskMapper::toResponse);
     }
 
     public TaskResponse update(Long id, TaskUpdate taskUpdate, User authUser) {
