@@ -19,7 +19,6 @@ import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
 
 import java.net.URI;
-import java.util.List;
 
 @RestController
 @RequestMapping(value = "/task")
@@ -84,9 +83,10 @@ public class TaskController {
             @ApiResponse(responseCode = "401", description = "Não autenticado")
     })
     @GetMapping("/status/{status}")
-    public ResponseEntity<List<TaskResponse>> listByStatus(@PathVariable TaskStatus status,
-                                                           @AuthenticationPrincipal User authUser) {
-        var response = taskService.listByStatus(status, authUser);
+    public ResponseEntity<Page<TaskResponse>> listByStatus(@PathVariable TaskStatus status,
+                                                           @AuthenticationPrincipal User authUser,
+                                                           Pageable pageable) {
+        var response = taskService.listByStatus(status, authUser, pageable);
         return ResponseEntity.ok(response);
     }
 

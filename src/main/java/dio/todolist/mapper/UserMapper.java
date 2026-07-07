@@ -1,7 +1,6 @@
 package dio.todolist.mapper;
 
 import dio.todolist.domain.User;
-import dio.todolist.dto.TaskResponse;
 import dio.todolist.dto.UserRequest;
 import dio.todolist.dto.UserResponse;
 import jakarta.validation.Valid;

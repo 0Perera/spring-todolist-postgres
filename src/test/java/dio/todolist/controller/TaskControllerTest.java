@@ -158,7 +158,7 @@ class TaskControllerTest {
     @WithMockUser
     @DisplayName("Deve retornar 200 OK ao listar tarefas por status PENDENTE")
     void listByStatusCase1() throws Exception {
-        when(taskService.listByStatus(eq(TaskStatus.PENDENTE), any())).thenReturn(List.of(createDefaultResponse()));
+        when(taskService.listByStatus(eq(TaskStatus.PENDENTE), any(), any(Pageable.class))).thenReturn(new PageImpl<>(List.of(createDefaultResponse())));
 
         mockMvc.perform(MockMvcRequestBuilders.get("/task/status/PENDENTE"))
                 .andExpect(MockMvcResultMatchers.status().isOk())
@@ -170,7 +170,7 @@ class TaskControllerTest {
     @DisplayName("Deve retornar 200 OK ao listar tarefas por status CONCLUIDA")
     void listByStatusCase2() throws Exception {
         TaskResponse concluded = new TaskResponse(DEFAULT_ID, DEFAULT_TITLE, DEFAULT_DESCRIPTION, LocalDateTime.now(), TaskStatus.CONCLUIDA);
-        when(taskService.listByStatus(eq(TaskStatus.CONCLUIDA), any())).thenReturn(List.of(concluded));
+        when(taskService.listByStatus(eq(TaskStatus.CONCLUIDA), any(), any(Pageable.class))).thenReturn(new PageImpl<>(List.of(concluded)));
 
         mockMvc.perform(MockMvcRequestBuilders.get("/task/status/CONCLUIDA"))
                 .andExpect(MockMvcResultMatchers.status().isOk())
@@ -181,7 +181,7 @@ class TaskControllerTest {
     @WithMockUser
     @DisplayName("Deve retornar 200 OK e lista vazia quando não houver tarefas com o status")
     void listByStatusCase3() throws Exception {
-        when(taskService.listByStatus(eq(TaskStatus.PENDENTE), any())).thenReturn(List.of());
+        when(taskService.listByStatus(eq(TaskStatus.PENDENTE), any(), any(Pageable.class))).thenReturn(new PageImpl<>(List.of()));
 
         mockMvc.perform(MockMvcRequestBuilders.get("/task/status/PENDENTE"))
                 .andExpect(MockMvcResultMatchers.status().isOk())

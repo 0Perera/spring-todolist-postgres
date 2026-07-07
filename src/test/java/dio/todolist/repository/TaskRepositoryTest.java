@@ -203,7 +203,8 @@ class TaskRepositoryTest {
         Task pending = createTask(new TaskRequest(DEFAULT_TITLE, DEFAULT_DESCRIPTION));
         createTaskWithStatus(new TaskRequest("Tarefa Concluída", "Descrição"), TaskStatus.CONCLUIDA);
 
-        List<Task> result = taskRepository.findByCreatedByAndStatus(defaultUser, TaskStatus.PENDENTE);
+        Page<Task> page = taskRepository.findByCreatedByAndStatus(defaultUser, TaskStatus.PENDENTE, Pageable.unpaged());
+        List<Task> result = page.getContent();
 
         assertEquals(1, result.size());
         assertEquals(pending.getTitle(), result.getFirst().getTitle());
@@ -216,7 +217,8 @@ class TaskRepositoryTest {
         createTask(new TaskRequest(DEFAULT_TITLE, DEFAULT_DESCRIPTION));
         Task completed = createTaskWithStatus(new TaskRequest("Tarefa Concluída", "Descrição"), TaskStatus.CONCLUIDA);
 
-        List<Task> result = taskRepository.findByCreatedByAndStatus(defaultUser, TaskStatus.CONCLUIDA);
+        Page<Task> page = taskRepository.findByCreatedByAndStatus(defaultUser, TaskStatus.CONCLUIDA, Pageable.unpaged());
+        List<Task> result = page.getContent();
 
         assertEquals(1, result.size());
         assertEquals(completed.getTitle(), result.getFirst().getTitle());
@@ -228,9 +230,9 @@ class TaskRepositoryTest {
     void findByCreatedByAndStatusCase3() {
         createTask(new TaskRequest(DEFAULT_TITLE, DEFAULT_DESCRIPTION));
 
-        List<Task> result = taskRepository.findByCreatedByAndStatus(defaultUser, TaskStatus.CONCLUIDA);
+        Page<Task> page = taskRepository.findByCreatedByAndStatus(defaultUser, TaskStatus.CONCLUIDA, Pageable.unpaged());
 
-        assertTrue(result.isEmpty());
+        assertTrue(page.isEmpty());
     }
 
     @Test

@@ -1,7 +1,5 @@
 package dio.todolist.domain;
 
-import dio.todolist.dto.TaskRequest;
-import dio.todolist.service.TaskService;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Getter;

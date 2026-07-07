@@ -229,28 +229,27 @@ class TaskServiceTest {
     void listByStatusCase1() {
         Task entity = createDefaultEntity();
         TaskResponse expectedResponse = createDefaultResponse();
-        List<TaskResponse> expectedList = List.of(expectedResponse);
+        Page<Task> taskPage = new PageImpl<>(List.of(entity));
 
-        when(taskRepository.findByCreatedByAndStatus(authUser, TaskStatus.PENDENTE)).thenReturn(List.of(entity));
-        when(taskMapper.toResponseList(List.of(entity))).thenReturn(expectedList);
+        when(taskRepository.findByCreatedByAndStatus(eq(authUser), eq(TaskStatus.PENDENTE), any(Pageable.class))).thenReturn(taskPage);
+        when(taskMapper.toResponse(entity)).thenReturn(expectedResponse);
 
-        List<TaskResponse> result = taskService.listByStatus(TaskStatus.PENDENTE, authUser);
+        Page<TaskResponse> result = taskService.listByStatus(TaskStatus.PENDENTE, authUser, Pageable.unpaged());
 
-        assertEquals(expectedList, result);
-        verify(taskRepository).findByCreatedByAndStatus(authUser, TaskStatus.PENDENTE);
-        verify(taskMapper).toResponseList(List.of(entity));
+        assertEquals(1, result.getTotalElements());
+        assertEquals(expectedResponse, result.getContent().get(0));
+        verify(taskRepository).findByCreatedByAndStatus(eq(authUser), eq(TaskStatus.PENDENTE), any(Pageable.class));
     }
 
     @Test
     @DisplayName("Deve retornar lista vazia quando não houver tarefas com o status especificado")
     void listByStatusCase2() {
-        when(taskRepository.findByCreatedByAndStatus(authUser, TaskStatus.CONCLUIDA)).thenReturn(List.of());
-        when(taskMapper.toResponseList(List.of())).thenReturn(List.of());
+        when(taskRepository.findByCreatedByAndStatus(eq(authUser), eq(TaskStatus.CONCLUIDA), any(Pageable.class))).thenReturn(new PageImpl<>(List.of()));
 
-        List<TaskResponse> result = taskService.listByStatus(TaskStatus.CONCLUIDA, authUser);
+        Page<TaskResponse> result = taskService.listByStatus(TaskStatus.CONCLUIDA, authUser, Pageable.unpaged());
 
         assertTrue(result.isEmpty());
-        verify(taskRepository).findByCreatedByAndStatus(authUser, TaskStatus.CONCLUIDA);
+        verify(taskRepository).findByCreatedByAndStatus(eq(authUser), eq(TaskStatus.CONCLUIDA), any(Pageable.class));
     }
 
     @Test

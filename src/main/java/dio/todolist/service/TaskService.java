@@ -14,8 +14,6 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 
-import java.util.List;
-
 @Service
 public class TaskService {
 
@@ -68,9 +66,9 @@ public class TaskService {
         return taskMapper.toResponse(updated);
     }
 
-    public List<TaskResponse> listByStatus(TaskStatus status, User authUser) {
-        var response = taskRepository.findByCreatedByAndStatus(authUser, status);
-        return taskMapper.toResponseList(response);
+    public Page<TaskResponse> listByStatus(TaskStatus status, User authUser, Pageable pageable) {
+        var response = taskRepository.findByCreatedByAndStatus(authUser, status, pageable);
+        return response.map(taskMapper::toResponse);
     }
 
     public void delete(Long id, User authUser) {

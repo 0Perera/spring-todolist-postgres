@@ -20,11 +20,6 @@ public class GlobalExceptionHandler {
         return ResponseEntity.status(403).body(e.getMessage());
     }
 
-    @ExceptionHandler(InvalidUserException.class)
-    public ResponseEntity<String> handleInvalidUserException(InvalidUserException e) {
-        return ResponseEntity.status(404).body(e.getMessage());
-    }
-
     @ExceptionHandler(DuplicateEmailException.class)
     public ResponseEntity<String> handleDuplicateEmailException(DuplicateEmailException e) {
         return ResponseEntity.status(HttpStatus.CONFLICT).body(e.getMessage());
